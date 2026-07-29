@@ -1,0 +1,659 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食堂周菜单生成工具</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23e85d3a%27 stroke-width=%272%27><path d=%27M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2%27/><path d=%27M7 2v20%27/><path d=%27M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7%27/><path d=%27M12 22h6%27/><path d=%27M9 22h3%27/></svg>">
+<style>
+:root {
+  --bg: #f5f5f0;
+  --surface: #ffffff;
+  --border: #e0ddd5;
+  --text: #2c2c2c;
+  --text-secondary: #7a7a7a;
+  --primary: #e85d3a;
+  --primary-hover: #d14e2e;
+  --big-meat: #c0392b;
+  --small-meat: #e67e22;
+  --veg: #4b9e6f;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.header-icon { width: 36px; height: 36px; flex-shrink: 0; }
+.header h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.02em; }
+.header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.config-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+.config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.config-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.config-group input,
+.config-group textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+.config-group input:focus,
+.config-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface);
+}
+.config-group textarea { resize: vertical; min-height: 52px; }
+.config-group .hint { font-size: 11px; color: var(--text-secondary); }
+.full-width { grid-column: 1 / -1; }
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.label-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 3px;
+}
+.label-dot.big { background: var(--big-meat); }
+.label-dot.small { background: var(--small-meat); }
+.label-dot.veg { background: var(--veg); }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-sm-outline {
+  padding: 3px 8px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.btn-sm-outline:hover { border-color: var(--primary); color: var(--primary); }
+.actions { display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px; }
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.day-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.day-header {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  background: #fafaf7;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.day-header .date { font-weight: 400; font-size: 11px; color: var(--text-secondary); }
+.day-dishes { padding: 10px 14px; }
+.dish-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #f0eee8;
+}
+.dish-item:last-child { border-bottom: none; }
+.dish-badge {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+.dish-badge.big { background: var(--big-meat); }
+.dish-badge.small { background: var(--small-meat); }
+.dish-badge.veg { background: var(--veg); }
+.dish-info { flex: 1; min-width: 0; }
+.dish-name { font-size: 14px; font-weight: 500; }
+.dish-meta { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+.dish-actions { flex-shrink: 0; }
+.day-empty {
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow);
+}
+.summary-bar .stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.summary-bar .stats span { white-space: nowrap; }
+.summary-bar .stats strong { color: var(--text); }
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
+.empty-state p { font-size: 14px; }
+.config-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .app { padding: 16px 12px 36px; }
+  .config-grid { grid-template-columns: 1fr 1fr; }
+  .week-grid { grid-template-columns: 1fr 1fr; }
+  .header h1 { font-size: 18px; }
+  .day-header { font-size: 13px; }
+}
+@media (max-width: 400px) {
+  .week-grid { grid-template-columns: 1fr; }
+  .config-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="#e85d3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/>
+      <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/><path d="M12 22h6"/><path d="M9 22h3"/>
+    </svg>
+    <div>
+      <h1>食堂周菜单生成</h1>
+      <p>给师傅的备餐参考 · 按荤素数量和成本自动排菜</p>
+    </div>
+  </div>
+
+  <div class="config-panel">
+    <div class="config-grid">
+      <div class="config-group">
+        <label class="label-row"><span class="label-dot big"></span> 大荤（道/天）</label>
+        <input type="number" id="bigMeatCount" value="1" min="0" max="6">
+      </div>
+      <div class="config-group">
+        <label class="label-row"><span class="label-dot small"></span> 小荤（道/天）</label>
+        <input type="number" id="smallMeatCount" value="2" min="0" max="6">
+      </div>
+      <div class="config-group">
+        <label class="label-row"><span class="label-dot veg"></span> 素菜（道/天）</label>
+        <input type="number" id="vegCount" value="2" min="0" max="6">
+      </div>
+      <div class="config-group">
+        <label>单份成本上限（元）</label>
+        <input type="number" id="maxCost" value="15" min="1" max="50" step="0.5">
+        <span class="hint">每道菜原料成本不超过此值</span>
+      </div>
+      <div class="config-group full-width">
+        <label>自定义食材（可选）</label>
+        <textarea id="customIngredients" placeholder="输入本周想用的食材，每行一个，如：&#10;鸡腿肉&#10;豆腐&#10;西兰花"></textarea>
+        <span class="hint">工具会优先推荐包含这些食材的菜品</span>
+      </div>
+      <div class="config-group full-width">
+        <label>排除食材/菜品（可选）</label>
+        <textarea id="excludeItems" placeholder="输入需要排除的食材或菜名，每行一个，如：&#10;羊肉&#10;香菜&#10;芹菜"></textarea>
+        <span class="hint">含有这些食材或名称的菜品不会出现在菜单中</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="generateBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        生成一周菜单
+      </button>
+    </div>
+  </div>
+
+  <div id="resultArea">
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/>
+        <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/><path d="M12 22h6"/><path d="M9 22h3"/>
+      </svg>
+      <p>设置荤素数量和成本上限，点击"生成"获取本周午餐方案</p>
+    </div>
+  </div>
+</div>
+
+<script>
+var DISH_DATABASE = [
+  // ===== 大荤 =====
+  { name: "红烧肉", cat: "荤", subcat: "大荤", cost: 12.0, tags: ["五花肉"] },
+  { name: "糖醋排骨", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["排骨"] },
+  { name: "可乐鸡翅", cat: "荤", subcat: "大荤", cost: 11.0, tags: ["鸡翅"] },
+  { name: "黄焖鸡", cat: "荤", subcat: "大荤", cost: 10.0, tags: ["鸡腿肉"] },
+  { name: "啤酒鸭", cat: "荤", subcat: "大荤", cost: 10.0, tags: ["鸭肉"] },
+  { name: "葱爆牛肉", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["牛肉", "大葱"] },
+  { name: "蚝油牛肉", cat: "荤", subcat: "大荤", cost: 13.0, tags: ["牛肉"] },
+  { name: "红烧鱼块", cat: "荤", subcat: "大荤", cost: 12.0, tags: ["草鱼"] },
+  { name: "清蒸鲈鱼", cat: "荤", subcat: "大荤", cost: 15.0, tags: ["鲈鱼"] },
+  { name: "葱烤鲫鱼", cat: "荤", subcat: "大荤", cost: 12.0, tags: ["鲫鱼"] },
+  { name: "油焖大虾", cat: "荤", subcat: "大荤", cost: 15.0, tags: ["虾"] },
+  { name: "蒜香排骨", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["排骨"] },
+  { name: "干锅牛蛙", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["牛蛙"] },
+  { name: "辣子鸡丁", cat: "荤", subcat: "大荤", cost: 8.5, tags: ["鸡胸肉", "干辣椒"] },
+  { name: "宫保鸡丁", cat: "荤", subcat: "大荤", cost: 8.0, tags: ["鸡胸肉", "花生", "黄瓜"] },
+  { name: "宫保虾仁", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["虾仁", "花生", "黄瓜"] },
+  { name: "椒盐排条", cat: "荤", subcat: "大荤", cost: 12.0, tags: ["猪肉"] },
+  { name: "糖醋里脊", cat: "荤", subcat: "大荤", cost: 11.0, tags: ["猪肉"] },
+  { name: "梅菜扣肉", cat: "荤", subcat: "大荤", cost: 11.0, tags: ["五花肉", "梅菜"] },
+  { name: "盐酥鸡", cat: "荤", subcat: "大荤", cost: 8.0, tags: ["鸡胸肉"] },
+  { name: "酸菜鱼", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["草鱼", "酸菜"] },
+  { name: "黑椒牛柳", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["牛肉"] },
+  { name: "红烧狮子头", cat: "荤", subcat: "大荤", cost: 9.0, tags: ["猪肉"] },
+  { name: "东坡肉", cat: "荤", subcat: "大荤", cost: 13.0, tags: ["五花肉"] },
+  { name: "西芹百合炒虾仁", cat: "荤", subcat: "大荤", cost: 14.0, tags: ["虾仁", "西芹", "百合"] },
+  { name: "毛血旺", cat: "荤", subcat: "大荤", cost: 13.0, tags: ["鸭血", "午餐肉", "豆芽"] },
+  // ===== 小荤 =====
+  { name: "鱼香肉丝", cat: "荤", subcat: "小荤", cost: 7.5, tags: ["猪肉", "木耳", "胡萝卜"] },
+  { name: "回锅肉", cat: "荤", subcat: "小荤", cost: 9.0, tags: ["五花肉", "蒜苗"] },
+  { name: "土豆烧牛肉", cat: "荤", subcat: "小荤", cost: 13.0, tags: ["牛腩", "土豆"] },
+  { name: "青椒肉丝", cat: "荤", subcat: "小荤", cost: 6.5, tags: ["猪肉", "青椒"] },
+  { name: "番茄炒蛋", cat: "荤", subcat: "小荤", cost: 4.5, tags: ["鸡蛋", "番茄"] },
+  { name: "木须肉", cat: "荤", subcat: "小荤", cost: 7.0, tags: ["猪肉", "鸡蛋", "木耳", "黄瓜"] },
+  { name: "鱼香茄子", cat: "荤", subcat: "小荤", cost: 6.0, tags: ["猪肉", "茄子"] },
+  { name: "麻婆豆腐（肉末）", cat: "荤", subcat: "小荤", cost: 4.0, tags: ["猪肉", "豆腐"] },
+  { name: "水煮肉片", cat: "荤", subcat: "小荤", cost: 11.0, tags: ["猪肉", "豆芽"] },
+  { name: "小炒肉", cat: "荤", subcat: "小荤", cost: 8.5, tags: ["五花肉", "青椒"] },
+  { name: "咖喱鸡肉", cat: "荤", subcat: "小荤", cost: 8.0, tags: ["鸡胸肉", "土豆", "胡萝卜"] },
+  { name: "酱爆猪肝", cat: "荤", subcat: "小荤", cost: 7.0, tags: ["猪肝", "青椒"] },
+  { name: "肉末蒸蛋", cat: "荤", subcat: "小荤", cost: 4.5, tags: ["猪肉", "鸡蛋"] },
+  { name: "川味回锅肉", cat: "荤", subcat: "小荤", cost: 9.0, tags: ["五花肉", "蒜苗", "豆干"] },
+  { name: "洋葱炒肉", cat: "荤", subcat: "小荤", cost: 5.5, tags: ["猪肉", "洋葱"] },
+  { name: "干煸四季豆（肉末）", cat: "荤", subcat: "小荤", cost: 5.0, tags: ["猪肉", "四季豆"] },
+  { name: "玉米炒鸡丁", cat: "荤", subcat: "小荤", cost: 7.0, tags: ["鸡胸肉", "玉米"] },
+  { name: "蒜苔炒肉", cat: "荤", subcat: "小荤", cost: 6.5, tags: ["猪肉", "蒜苔"] },
+  { name: "黄瓜炒蛋", cat: "荤", subcat: "小荤", cost: 3.5, tags: ["鸡蛋", "黄瓜"] },
+  { name: "韭菜炒蛋", cat: "荤", subcat: "小荤", cost: 3.5, tags: ["鸡蛋", "韭菜"] },
+  { name: "肉末粉丝", cat: "荤", subcat: "小荤", cost: 4.0, tags: ["猪肉", "粉丝"] },
+  { name: "芹菜炒肉", cat: "荤", subcat: "小荤", cost: 5.5, tags: ["猪肉", "芹菜"] },
+  // ===== 素菜 =====
+  { name: "清炒时蔬", cat: "素", subcat: "素", cost: 2.5, tags: ["青菜"] },
+  { name: "蒜蓉空心菜", cat: "素", subcat: "素", cost: 3.0, tags: ["空心菜"] },
+  { name: "清炒小白菜", cat: "素", subcat: "素", cost: 2.5, tags: ["小白菜"] },
+  { name: "蚝油生菜", cat: "素", subcat: "素", cost: 3.0, tags: ["生菜"] },
+  { name: "醋溜土豆丝", cat: "素", subcat: "素", cost: 2.5, tags: ["土豆"] },
+  { name: "酸辣土豆丝", cat: "素", subcat: "素", cost: 2.5, tags: ["土豆"] },
+  { name: "干煸四季豆", cat: "素", subcat: "素", cost: 3.5, tags: ["四季豆"] },
+  { name: "麻婆豆腐（素）", cat: "素", subcat: "素", cost: 2.5, tags: ["豆腐"] },
+  { name: "家常豆腐", cat: "素", subcat: "素", cost: 3.0, tags: ["豆腐"] },
+  { name: "红烧豆腐", cat: "素", subcat: "素", cost: 2.5, tags: ["豆腐"] },
+  { name: "蒜蓉西兰花", cat: "素", subcat: "素", cost: 4.5, tags: ["西兰花"] },
+  { name: "手撕包菜", cat: "素", subcat: "素", cost: 3.0, tags: ["包菜"] },
+  { name: "素炒西葫芦", cat: "素", subcat: "素", cost: 3.0, tags: ["西葫芦"] },
+  { name: "地三鲜", cat: "素", subcat: "素", cost: 3.5, tags: ["土豆", "茄子", "青椒"] },
+  { name: "番茄菜花", cat: "素", subcat: "素", cost: 3.5, tags: ["菜花", "番茄"] },
+  { name: "清炒豆芽", cat: "素", subcat: "素", cost: 2.0, tags: ["豆芽"] },
+  { name: "蒜泥茄子", cat: "素", subcat: "素", cost: 3.0, tags: ["茄子"] },
+  { name: "红烧茄子", cat: "素", subcat: "素", cost: 3.0, tags: ["茄子"] },
+  { name: "素炒三丝", cat: "素", subcat: "素", cost: 3.0, tags: ["土豆", "胡萝卜", "青椒"] },
+  { name: "清蒸南瓜", cat: "素", subcat: "素", cost: 2.5, tags: ["南瓜"] },
+  { name: "葱油萝卜丝", cat: "素", subcat: "素", cost: 2.5, tags: ["白萝卜"] },
+  { name: "清炒藕片", cat: "素", subcat: "素", cost: 3.5, tags: ["莲藕"] },
+  { name: "素炒豆角", cat: "素", subcat: "素", cost: 3.5, tags: ["豆角"] },
+  { name: "虎皮青椒", cat: "素", subcat: "素", cost: 3.0, tags: ["青椒"] },
+  { name: "香菇青菜", cat: "素", subcat: "素", cost: 3.5, tags: ["青菜", "香菇"] },
+  { name: "松仁玉米", cat: "素", subcat: "素", cost: 4.0, tags: ["玉米", "松仁"] },
+  { name: "蜜汁山药", cat: "素", subcat: "素", cost: 3.5, tags: ["山药"] },
+  { name: "清炒芦笋", cat: "素", subcat: "素", cost: 5.0, tags: ["芦笋"] },
+  { name: "上汤娃娃菜", cat: "素", subcat: "素", cost: 3.5, tags: ["娃娃菜"] },
+  { name: "蒜蓉粉丝蒸丝瓜", cat: "素", subcat: "素", cost: 3.5, tags: ["丝瓜", "粉丝"] },
+  { name: "韭菜炒豆芽", cat: "素", subcat: "素", cost: 2.5, tags: ["韭菜", "豆芽"] },
+  { name: "清香莴笋丝", cat: "素", subcat: "素", cost: 2.5, tags: ["莴笋"] },
+  { name: "清炒菠菜", cat: "素", subcat: "素", cost: 3.0, tags: ["菠菜"] },
+  { name: "素炒冬瓜", cat: "素", subcat: "素", cost: 2.5, tags: ["冬瓜"] },
+  { name: "凉拌黄瓜", cat: "素", subcat: "素", cost: 2.0, tags: ["黄瓜"] },
+  { name: "凉拌木耳", cat: "素", subcat: "素", cost: 3.5, tags: ["木耳"] },
+  { name: "皮蛋豆腐", cat: "素", subcat: "素", cost: 3.0, tags: ["豆腐"] },
+  { name: "蒜蓉秋葵", cat: "素", subcat: "素", cost: 5.0, tags: ["秋葵"] },
+  { name: "干锅花菜", cat: "素", subcat: "素", cost: 3.5, tags: ["花菜"] },
+  { name: "葱油蚕豆", cat: "素", subcat: "素", cost: 4.0, tags: ["蚕豆"] },
+  { name: "清炒苋菜", cat: "素", subcat: "素", cost: 3.0, tags: ["苋菜"] },
+];
+
+function shuffle(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+}
+
+function getWeekDates() {
+  var now = new Date();
+  var day = now.getDay();
+  var diff = day === 0 ? -6 : 1 - day;
+  var monday = new Date(now);
+  monday.setDate(monday.getDate() + diff);
+  var names = ["周一", "周二", "周三", "周四", "周五"];
+  var days = [];
+  for (var i = 0; i < 5; i++) {
+    var d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    days.push({ name: names[i], date: (d.getMonth() + 1) + "/" + d.getDate() });
+  }
+  return days;
+}
+
+function matchesExclude(dish, excludeList) {
+  if (!excludeList || excludeList.length === 0) return false;
+  for (var e = 0; e < excludeList.length; e++) {
+    var eLower = excludeList[e];
+    if (!eLower) continue;
+    // Check dish name
+    if (dish.name.indexOf(eLower) >= 0) return true;
+    // Check tags
+    for (var t = 0; t < dish.tags.length; t++) {
+      if (dish.tags[t].indexOf(eLower) >= 0 || eLower.indexOf(dish.tags[t]) >= 0) return true;
+    }
+  }
+  return false;
+}
+
+function generateMenu(bigMeat, smallMeat, vegCount, maxCost, customTags, excludeList) {
+  // Filter pools by subcat and cost
+  var bigPool = DISH_DATABASE.filter(function(d) {
+    return d.subcat === "大荤" && d.cost <= maxCost && !matchesExclude(d, excludeList);
+  });
+  var smallPool = DISH_DATABASE.filter(function(d) {
+    return d.subcat === "小荤" && d.cost <= maxCost && !matchesExclude(d, excludeList);
+  });
+  var vegPool = DISH_DATABASE.filter(function(d) {
+    return d.subcat === "素" && d.cost <= maxCost && !matchesExclude(d, excludeList);
+  });
+
+  // Fallback: relax cost by 50% if pool too small
+  if (bigPool.length < bigMeat * 3) {
+    bigPool = DISH_DATABASE.filter(function(d) {
+      return d.subcat === "大荤" && d.cost <= maxCost * 1.5 && !matchesExclude(d, excludeList);
+    });
+  }
+  if (smallPool.length < smallMeat * 3) {
+    smallPool = DISH_DATABASE.filter(function(d) {
+      return d.subcat === "小荤" && d.cost <= maxCost * 1.5 && !matchesExclude(d, excludeList);
+    });
+  }
+  if (vegPool.length < vegCount * 3) {
+    vegPool = DISH_DATABASE.filter(function(d) {
+      return d.subcat === "素" && d.cost <= maxCost * 1.5 && !matchesExclude(d, excludeList);
+    });
+  }
+
+  var weekDays = getWeekDates();
+  var usedNames = {};
+  var result = [];
+
+  for (var d = 0; d < 5; d++) {
+    var dayBig = pickDishes(bigPool, usedNames, bigMeat, customTags);
+    var daySmall = pickDishes(smallPool, usedNames, smallMeat, customTags);
+    var dayVeg = pickDishes(vegPool, usedNames, vegCount, customTags);
+    result.push({
+      dayName: weekDays[d].name,
+      date: weekDays[d].date,
+      bigMeats: dayBig,
+      smallMeats: daySmall,
+      vegs: dayVeg
+    });
+  }
+  return result;
+}
+
+function pickDishes(pool, usedNames, count, customTags) {
+  if (count === 0) return [];
+  var shuffled = shuffle(pool.slice());
+
+  if (customTags && customTags.length > 0) {
+    shuffled.sort(function(a, b) {
+      var scoreA = customTags.reduce(function(s, tag) {
+        return s + (a.tags.some(function(t) { return t.indexOf(tag) >= 0 || tag.indexOf(t) >= 0; }) ? 1 : 0);
+      }, 0);
+      var scoreB = customTags.reduce(function(s, tag) {
+        return s + (b.tags.some(function(t) { return t.indexOf(tag) >= 0 || tag.indexOf(t) >= 0; }) ? 1 : 0);
+      }, 0);
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return Math.random() - 0.5;
+    });
+  } else {
+    shuffle(shuffled);
+  }
+
+  var fresh = [];
+  var reused = [];
+  for (var i = 0; i < shuffled.length; i++) {
+    if (!usedNames[shuffled[i].name]) { fresh.push(shuffled[i]); }
+    else { reused.push(shuffled[i]); }
+  }
+  var picked = fresh.slice(0, count);
+  if (picked.length < count) {
+    picked = picked.concat(shuffle(reused.slice()).slice(0, count - picked.length));
+  }
+  picked.forEach(function(d) { usedNames[d.name] = true; });
+  return picked;
+}
+
+function renderMenu(menu) {
+  var area = document.getElementById("resultArea");
+  if (!menu || menu.length === 0) return;
+
+  var totalCost = 0;
+  var totalDishes = 0;
+  var html = '<div class="week-grid">';
+
+  for (var d = 0; d < menu.length; d++) {
+    var day = menu[d];
+    var dayDishes = (day.bigMeats || []).concat(day.smallMeats || []).concat(day.vegs || []);
+    var dayCost = dayDishes.reduce(function(s, dd) { return s + dd.cost; }, 0);
+    totalCost += dayCost;
+    totalDishes += dayDishes.length;
+
+    html += '<div class="day-card">';
+    html += '<div class="day-header">';
+    html += '<span>' + day.dayName + ' <span class="date">' + day.date + '</span></span>';
+    html += '<span style="font-weight:400;font-size:12px;color:#7a7a7a">≈' + dayCost.toFixed(1) + '元</span>';
+    html += '</div><div class="day-dishes">';
+
+    (day.bigMeats || []).forEach(function(dish, idx) {
+      html += '<div class="dish-item">' +
+        '<div class="dish-badge big">大</div>' +
+        '<div class="dish-info"><div class="dish-name">' + dish.name + '</div><div class="dish-meta">¥' + dish.cost.toFixed(1) + '</div></div>' +
+        '<div class="dish-actions"><button class="btn-sm-outline" onclick="rerollSlot(' + d + ',\'bigMeat\',' + idx + ')" title="换一道">↻</button></div>' +
+        '</div>';
+    });
+    (day.smallMeats || []).forEach(function(dish, idx) {
+      html += '<div class="dish-item">' +
+        '<div class="dish-badge small">小</div>' +
+        '<div class="dish-info"><div class="dish-name">' + dish.name + '</div><div class="dish-meta">¥' + dish.cost.toFixed(1) + '</div></div>' +
+        '<div class="dish-actions"><button class="btn-sm-outline" onclick="rerollSlot(' + d + ',\'smallMeat\',' + idx + ')" title="换一道">↻</button></div>' +
+        '</div>';
+    });
+    (day.vegs || []).forEach(function(dish, idx) {
+      html += '<div class="dish-item">' +
+        '<div class="dish-badge veg">素</div>' +
+        '<div class="dish-info"><div class="dish-name">' + dish.name + '</div><div class="dish-meta">¥' + dish.cost.toFixed(1) + '</div></div>' +
+        '<div class="dish-actions"><button class="btn-sm-outline" onclick="rerollSlot(' + d + ',\'veg\',' + idx + ')" title="换一道">↻</button></div>' +
+        '</div>';
+    });
+
+    if (dayDishes.length === 0) {
+      html += '<div class="day-empty">今日未安排菜品</div>';
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+
+  var avgCost = totalDishes > 0 ? (totalCost / totalDishes) : 0;
+  html += '<div class="summary-bar">';
+  html += '<div class="stats">';
+  html += '<span>本周合计 <strong>' + totalDishes + '</strong> 道</span>';
+  html += '<span>日均 ≈<strong>' + (menu.length > 0 ? (totalCost / menu.length).toFixed(1) : "0") + '</strong> 元</span>';
+  html += '<span>均价 <strong>' + avgCost.toFixed(1) + '</strong> 元/道</span>';
+  html += '</div>';
+  html += '<div><button class="btn-sm-outline" onclick="rerollAll()">全部重排</button></div>';
+  html += '</div>';
+
+  area.innerHTML = html;
+  window._currentMenu = menu;
+}
+
+function getDishPool(type) {
+  var maxCost = parseFloat(document.getElementById("maxCost").value) || 15;
+  var excludeText = document.getElementById("excludeItems").value.trim();
+  var excludeList = excludeText ? excludeText.split("\n").map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; }) : [];
+  var subcatMap = { bigMeat: "大荤", smallMeat: "小荤", veg: "素" };
+  var target = subcatMap[type] || type;
+  var pool = DISH_DATABASE.filter(function(d) {
+    return d.subcat === target && d.cost <= maxCost && !matchesExclude(d, excludeList);
+  });
+  if (pool.length < 3) {
+    pool = DISH_DATABASE.filter(function(d) {
+      return d.subcat === target && d.cost <= maxCost * 1.5 && !matchesExclude(d, excludeList);
+    });
+  }
+  return pool;
+}
+
+function rerollSlot(dayIdx, type, dishIdx) {
+  var menu = window._currentMenu;
+  if (!menu) return;
+  var day = menu[dayIdx];
+  var subcatMap = { bigMeat: "大荤", smallMeat: "小荤", veg: "素" };
+  var target = subcatMap[type] || type;
+
+  // Find the right array
+  var currentList;
+  if (type === "bigMeat") currentList = day.bigMeats;
+  else if (type === "smallMeat") currentList = day.smallMeats;
+  else currentList = day.vegs;
+
+  if (!currentList || dishIdx >= currentList.length) return;
+  var oldName = currentList[dishIdx].name;
+
+  // Collect names currently used this week (excluding the one being replaced)
+  var used = {};
+  for (var d = 0; d < menu.length; d++) {
+    (menu[d].bigMeats || []).forEach(function(dd) { used[dd.name] = true; });
+    (menu[d].smallMeats || []).forEach(function(dd) { used[dd.name] = true; });
+    (menu[d].vegs || []).forEach(function(dd) { used[dd.name] = true; });
+  }
+  delete used[oldName];
+
+  var pool = getDishPool(type);
+  var candidates = pool.filter(function(d) { return d.name !== oldName; });
+  var fresh = candidates.filter(function(d) { return !used[d.name]; });
+  var picked;
+  if (fresh.length > 0) { shuffle(fresh); picked = fresh[0]; }
+  else if (candidates.length > 0) { shuffle(candidates); picked = candidates[0]; }
+  else return;
+
+  currentList[dishIdx] = picked;
+  renderMenu(menu);
+}
+
+function rerollAll() { generateAndRender(); }
+
+function generateAndRender() {
+  var bigMeat = parseInt(document.getElementById("bigMeatCount").value) || 1;
+  var smallMeat = parseInt(document.getElementById("smallMeatCount").value) || 2;
+  var vegCount = parseInt(document.getElementById("vegCount").value) || 2;
+  var maxCost = parseFloat(document.getElementById("maxCost").value) || 15;
+  var customText = document.getElementById("customIngredients").value.trim();
+  var customTags = customText ? customText.split("\n").map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; }) : [];
+  var excludeText = document.getElementById("excludeItems").value.trim();
+  var excludeList = excludeText ? excludeText.split("\n").map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; }) : [];
+  var menu = generateMenu(bigMeat, smallMeat, vegCount, maxCost, customTags, excludeList);
+  renderMenu(menu);
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById("generateBtn").addEventListener("click", generateAndRender);
+  var inputs = document.querySelectorAll(".config-group input");
+  for (var i = 0; i < inputs.length; i++) {
+    inputs[i].addEventListener("keydown", function(e) {
+      if (e.key === "Enter") generateAndRender();
+    });
+  }
+});
+</script>
+</body>
+</html>
