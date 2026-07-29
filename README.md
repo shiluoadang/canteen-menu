@@ -14,3 +14,14 @@
 ## 使用
 
 直接打开 index.html 即可使用。
+
+
+## 在线使用
+
+直接打开以下链接即可使用（无需下载）：
+
+**[https://shiluoadang.github.io/canteen-menu/](https://shiluoadang.github.io/canteen-menu/)**
+
+---
+
+> 纯前端工具，所有数据在浏览器本地处理，不上传任何信息。
